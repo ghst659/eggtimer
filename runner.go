@@ -32,6 +32,8 @@ type Event struct {
 	When time.Duration
 	// The string event seen on stdout or stderr.
 	What string
+	// Error found, if any.
+	Error error
 }
 
 // A Runner runs an exec.Cmd, producing an Event on a channel
@@ -47,19 +49,22 @@ func NewRunner(c Clock) *Runner {
 
 // relay is a helper function to turn strings on stdout or stderr into a stream
 // of Events into a channel.
-func (r *Runner) relay(wg *sync.WaitGroup, p io.ReadCloser, start time.Time, s chan<- Event) error {
+func (r *Runner) relay(wg *sync.WaitGroup, p io.ReadCloser, start time.Time, s chan<- Event) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(p)
 	for scanner.Scan() {
 		line := scanner.Text()
-		ahora := r.clock.Now()
-		delta := ahora.Sub(start)
+		currentTime := r.clock.Now()
+		delta := currentTime.Sub(start)
 		s <- Event{
 			When: delta,
 			What: line,
 		}
 	}
-	return scanner.Err()
+	err := scanner.Err()
+	if err != nil {
+		s <- Event{Error: err}
+	}
 }
 
 // Run executes the given exec.Cmd, and produces Events on the given eventStream.
@@ -68,13 +73,16 @@ func (r *Runner) Run(c *exec.Cmd, eventStream chan<- Event) {
 	start := r.clock.Now()
 	stdout, err := c.StdoutPipe()
 	if err != nil {
+		eventStream <- Event{Error: err}
 		return
 	}
 	stderr, err := c.StderrPipe()
 	if err != nil {
+		eventStream <- Event{Error: err}
 		return
 	}
 	if err = c.Start(); err != nil {
+		eventStream <- Event{Error: err}
 		return
 	}
 	var wg sync.WaitGroup

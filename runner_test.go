@@ -16,7 +16,7 @@ type mockClock struct {
 
 func (m *mockClock) Now() time.Time {
 	if m.index >= len(m.points) {
-		panic(fmt.Sprintf("mockClock index out of range: %q", m))
+		panic(fmt.Sprintf("index out of range: %q", m))
 	}
 	defer func() {m.index++}()
 	return m.points[m.index]
@@ -56,6 +56,9 @@ func TestRun(t *testing.T) {
 	i := 1
 	for e := range events {
 		t.Logf("event: %q", e)
+		if e.Error != nil {
+			t.Errorf("Run error: %q", e.Error)
+		}
 		wantTime, err := time.ParseDuration(fmt.Sprintf("%ds", i * 10))
 		if err != nil {
 			t.Errorf("setup mismatch: %q", err)
