@@ -2,6 +2,7 @@ package eggtimer
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 )
 
@@ -13,19 +14,82 @@ type Segment struct {
 	Start time.Duration
 	// The finish of the activity, relative to teh overall workflow start.
 	Finish time.Duration
-	// Errors, if any
+	// Errors, if any, found during segment identification.
 	Error error
 }
 
 // A SegmentDefinition processes lines and determines if they
 // mark the start or end of a given tagged segment.
 type SegmentDefinition interface {
+	// TypeName returns the string name for this type of segment.
 	TypeName() string
+	// IsStart determines if the line is a start for this kind segment,
+	// and returns a non-empty string for the name of this instance of this
+	// type of segment.  An empty return value indicates it is not a start.
 	IsStart(line string) string
+	// IsFinish determines if the line is a finish for this kind segment,
+	// and returns a non-empty string for the name of this instance of this
+	// type of segment.  An empty return value indicates it is not a finish.
 	IsFinish(line string) string
 }
 
-// A Segmenter is 
+// A RegexpDef is a regexp-based SegmentDefinition, which uses regular
+// expressions to identify start and finish Events.
+type RegexpDef struct {
+	name string
+	reStart *regexp.Regexp
+	reFinish *regexp.Regexp
+}
+
+// NewRegexpDef creates a new RegexpDef given a type name, and start and finish
+// regexps.  Each regexp must have a sub-expression which identifies the tag
+// of a given segment instance.
+func NewRegexpDef(typeName, startExpr, finishExpr string) (def *RegexpDef, err error) {
+	startRegexp, err := regexp.Compile(startExpr)
+	if err != nil {
+		return
+	}
+	finishRegexp, err := regexp.Compile(startExpr)
+	if err != nil {
+		return
+	}
+	def = &RegexpDef {
+		name: typeName,
+		reStart: startRegexp,
+		reFinish: finishRegexp,
+	}
+	return
+}
+
+// TypeName returns the string name for this segment type.
+func (d *RegexpDef) TypeName() string {
+	return d.name
+}
+
+// IsStart determines if the line is a start for this kind segment,
+// and returns a non-empty string for the name of this instance of this
+// type of segment.  An empty return value indicates it is not a start.
+func (d *RegexpDef) IsStart(line string) string {
+	matches := d.reStart.FindStringSubmatch(line)
+	if matches == nil {
+		return ""
+	}
+	return matches[1]
+}
+
+// IsFinish determines if the line is a finish for this kind segment,
+// and returns a non-empty string for the name of this instance of this
+// type of segment.  An empty return value indicates it is not a finish.
+func (d *RegexpDef) IsFinish(line string) string {
+	matches := d.reFinish.FindStringSubmatch(line)	
+	if matches == nil {
+		return ""
+	}
+	return matches[1]
+}
+
+// A Segmenter processes Events, using a set of SegmentDefinitions to
+// identify segments that have start and finish events within the processed set.
 type Segmenter struct {
 	segTypes []SegmentDefinition
 }
@@ -35,8 +99,8 @@ func (this *Segmenter) AddDefinition(d SegmentDefinition) {
 	this.segTypes = append(this.segTypes, d)
 }
 
-// Segment collects Events and, using its SegmentDefinitions, compiles
-// a table mapping activity names to a Segment struct.
+// Collect processes a channel of Events and, using its SegmentDefinitions, compiles
+// a table mapping activity names to a map of segment names to Segment structs.
 func (this Segmenter) Collect(events <-chan Event) (activity map[string]*Segment, err error) {
 	activity = make(map[string]*Segment)
 	for e := range events {
