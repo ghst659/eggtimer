@@ -42,23 +42,14 @@ type RegexpDef struct {
 }
 
 // NewRegexpDef creates a new RegexpDef given a type name, and start and finish
-// regexps.  Each regexp must have a sub-expression which identifies the tag
+// regexps.  Each regexp's first sub-expression which identifies the tag
 // of a given segment instance.
-func NewRegexpDef(typeName, startExpr, finishExpr string) (def *RegexpDef, err error) {
-	startRegexp, err := regexp.Compile(startExpr)
-	if err != nil {
-		return
-	}
-	finishRegexp, err := regexp.Compile(finishExpr)
-	if err != nil {
-		return
-	}
-	def = &RegexpDef {
+func NewRegexpDef(typeName, startExpr, finishExpr string) *RegexpDef {
+	return &RegexpDef {
 		name: typeName,
-		reStart: startRegexp,
-		reFinish: finishRegexp,
+		reStart: regexp.MustCompile(startExpr),
+		reFinish: regexp.MustCompile(finishExpr),
 	}
-	return
 }
 
 // TypeName returns the string name for this segment type.

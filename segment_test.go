@@ -21,12 +21,8 @@ func duration(text string) time.Duration {
 }
 
 func TestCollect(t *testing.T) {
-	segdef, err := NewRegexpDef("RType", `^Start\s+(\w+)`, `^Finish\s+(\w+)`)
-	if err != nil {
-		t.Errorf("setup failure on NewRegexpDef: %v", err)
-	}
 	var segmenter Segmenter
-	segmenter.AddDefinition(segdef)
+	segmenter.AddDefinition(NewRegexpDef("RType", `^Start\s+(\w+)`, `^Finish\s+(\w+)`))
 	inputs := make(chan Event)
 	data := []Event {
 		{
