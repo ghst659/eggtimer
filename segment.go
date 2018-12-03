@@ -49,7 +49,7 @@ func NewRegexpDef(typeName, startExpr, finishExpr string) (def *RegexpDef, err e
 	if err != nil {
 		return
 	}
-	finishRegexp, err := regexp.Compile(startExpr)
+	finishRegexp, err := regexp.Compile(finishExpr)
 	if err != nil {
 		return
 	}
