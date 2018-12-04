@@ -22,7 +22,7 @@ func duration(text string) time.Duration {
 
 func TestCollect(t *testing.T) {
 	var segmenter Segmenter
-	segmenter.AddDefinition(NewRegexpDef("RType", `^Start\s+(\w+)`, `^Finish\s+(\w+)`))
+	segmenter.AddDefinition("RType", `^Start\s+(\w+)`, `^Finish\s+(\w+)`)
 	inputs := make(chan Event)
 	data := []Event {
 		{

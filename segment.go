@@ -41,17 +41,6 @@ type RegexpDef struct {
 	reFinish *regexp.Regexp
 }
 
-// NewRegexpDef creates a new RegexpDef given a type name, and start and finish
-// regexps.  Each regexp's first sub-expression which identifies the tag
-// of a given segment instance.
-func NewRegexpDef(typeName, startExpr, finishExpr string) *RegexpDef {
-	return &RegexpDef {
-		name: typeName,
-		reStart: regexp.MustCompile(startExpr),
-		reFinish: regexp.MustCompile(finishExpr),
-	}
-}
-
 // TypeName returns the string name for this segment type.
 func (d *RegexpDef) TypeName() string {
 	return d.name
@@ -86,8 +75,12 @@ type Segmenter struct {
 }
 
 // AddDefinitions adds a SegmentDefinition to a Segmenter.
-func (this *Segmenter) AddDefinition(d SegmentDefinition) {
-	this.segTypes = append(this.segTypes, d)
+func (this *Segmenter) AddDefinition(typeName, startExpr, finishExpr string) {
+	this.segTypes = append(this.segTypes, &RegexpDef{
+		name: typeName,
+		reStart: regexp.MustCompile(startExpr),
+		reFinish: regexp.MustCompile(finishExpr),
+	})
 }
 
 // Collect processes a channel of Events and, using its SegmentDefinitions, compiles
